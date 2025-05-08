@@ -2,9 +2,9 @@
 
 ## Introdução
 
-O objetivo deste desafio é avaliar seus conhecimentos em **APIs** e **Webhooks**, além da sua capacidade de aprender rapidamente e implementar soluções eficientes, usando frameworks renomados como **Django** e **Django Rest Framework (DRF)**.
+O objetivo deste desafio é avaliar os conhecimentos em **APIs** e **Webhooks**, além da capacidade de aprender rapidamente e implementar soluções eficientes, usando frameworks renomados como **Django** e **Django Rest Framework (DRF)**.
 
-Você deverá desenvolver uma web API que sincroniza eventos de um sistema de atendimentos no WhatsApp, processando webhooks e registrando as alterações no banco de dados.
+Deverá desenvolver uma web API que sincroniza eventos de um sistema de atendimentos no WhatsApp, processando webhooks e registrando as alterações no banco de dados.
 
 ## 🎯 O Desafio
 
@@ -94,10 +94,6 @@ Os eventos virão no seguinte formato:
 - O ID da mensagem e o ID da conversa devem ser únicos
 - O sistema deve lidar com erros sem retornar HTTP 500
 
-## 🔥 Bônus (Opcional)
-
-Se quiser ir além e demonstrar sua capacidade de aprendizado e desenvolvimento rápido, você pode implementar um frontend simples para visualizar as conversas e mensagens.
-
 ## 🚀 Tecnologias e Ferramentas
 
 - Django
@@ -105,6 +101,41 @@ Se quiser ir além e demonstrar sua capacidade de aprendizado e desenvolvimento 
 - Poetry
 - SQLite
 - GitHub
+
+## 💡 Como o Desafio Foi Resolvido
+
+Para atender aos requisitos do desafio, a seguinte abordagem foi adotada:
+
+1.  **Configuração Inicial do Projeto:**
+    *   O projeto Django foi iniciado e configurado para utilizar o Django Rest Framework (DRF).
+    *   As dependências foram gerenciadas com o Poetry, conforme especificado.
+
+2.  **Criação dos Modelos:**
+    *   Foram definidos dois modelos principais no `models.py` do app correspondente:
+        *   `Conversation`: Com campos para `id` (UUID, único) e `state` (CharField com escolhas `OPEN` e `CLOSED`, default `OPEN`).
+        *   `Message`: Com campos para `id` (UUID, único), `conversation` (ForeignKey para `Conversation`), `timestamp` (DateTimeField), `direction` (CharField com escolhas `SENT` e `RECEIVED`), e `content` (TextField).
+    *   As migrações foram criadas e aplicadas para refletir esses modelos no banco de dados SQLite.
+
+3.  **Desenvolvimento da API de Webhook (`/webhook/`):**
+    *   Foi criada uma `APIView` no DRF para o endpoint `POST /webhook/`.
+    *   A view é responsável por:
+        *   Receber o payload JSON do webhook.
+        *   Identificar o `type` do evento (`NEW_CONVERSATION`, `NEW_MESSAGE`, `CLOSE_CONVERSATION`).
+        *   Para `NEW_CONVERSATION`: Criar uma nova instância de `Conversation` com o `id` fornecido e estado `OPEN`.
+        *   Para `NEW_MESSAGE`:
+            *   Verificar se a `conversation_id` existe e se a conversa está `OPEN`.
+            *   Criar uma nova instância de `Message` associada à conversa, com os dados fornecidos (`id`, `timestamp`, `direction`, `content`).
+        *   Para `CLOSE_CONVERSATION`: Encontrar a conversa pelo `id` e atualizar seu estado para `CLOSED`.
+    *   Validadores e serializers do DRF foram utilizados para garantir a integridade dos dados recebidos e para criar/atualizar os modelos.
+    *   A regra de negócio que impede novas mensagens em conversas `CLOSED` foi implementada na lógica de criação de mensagens.
+    *   A unicidade dos IDs de `Conversation` e `Message` é garantida pela definição dos campos `id` como `primary_key=True` ou `unique=True` nos modelos, e tratada adequadamente para evitar erros 500 (ex: retornando um erro 409 Conflict se tentar criar uma conversa/mensagem com ID já existente).
+
+4.  **Desenvolvimento do Endpoint de Consulta (`/conversations/{id}`):**
+    *   Foi criada uma `RetrieveAPIView` no DRF para o endpoint `GET /conversations/{id}`.
+    *   Serializers aninhados foram utilizados para incluir o estado da conversa e a lista de suas mensagens na resposta. O serializer de `Conversation` incluiu um serializer de `Message` com `many=True`.
+
+5.  **Tratamento de Erros:**
+    *   Foram implementados manipuladores de exceção customizados no DRF ou try-except blocks nas views para capturar exceções específicas (ex: `ObjectDoesNotExist`, `ValidationError`) e retornar respostas de erro apropriadas (ex: 400, 404, 409) em vez de erros 500.
 
 ## 📌 Instruções de Instalação
 
@@ -118,47 +149,30 @@ pip install poetry
 
 ### Instalação do Projeto
 
-> [!WARNING]  
-> Siga todas as instruções de instalação do projeto. O descumprimento dos requisitos de instalação acarretará a desclassificação do(a) candidato(a).
+> Opcionalmente, crie um ambiente virtual python.
 
-1.	Crie um repositório público, utilizando este repositório como template. Para isso, clique sobre o botão "**Use this template**", no canto superio direito desta tela. Forks **não** serão aceitos.
-
-
-
-2.	Instale as dependências do projeto utilizando o Poetry:
+1.	Instale as dependências do projeto utilizando o Poetry:
 
 ```bash
-cd realmate-challenge
+cd realmate-challenge-felipe
 poetry install
 ```
 
-3.	Aplique as migrações no banco de dados SQLite:
+2.	Aplique as migrações no banco de dados SQLite:
 
 ```bash
+python manage.py makemigrations
 python manage.py migrate
 ```
 
-4.	Execute o servidor de desenvolvimento:
+3.	Execute o servidor de desenvolvimento:
 
 ```bash
 python manage.py runserver
 ```
-
-
-## 📌 Entrega e Requisitos
-
-Após concluir o desafio, envie o link do repositório para o e-mail tecnologia@realmate.com.br com seu nome e número do WhatsApp informados no e-mail.
 
 ## 📚 Referências
 
 - [Django Rest Framework](https://www.django-rest-framework.org/)
 - [Django](https://www.djangoproject.com/)
 - [Poetry](https://python-poetry.org/)
-
-## 📧 Dúvidas
-
-Caso tenha dúvidas sobre o desafio, entre em contato com nossa equipe de tecnologia no e-mail tecnologia@realmate.com.br.
-
-Boa sorte! 🚀
-
-_Equipe Realmate_
